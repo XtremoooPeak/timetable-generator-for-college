@@ -1,5 +1,10 @@
 import java.util.*;
 
+/**
+ * AI-driven timetable generation service using Groq Llama 3.3.
+ * Implements a validation-repair loop: generate → validate → repair (up to MAX_RETRIES).
+ * Falls back to deterministic local solver if AI fails.
+ */
 public class AIService {
     private static final int MAX_RETRIES = 5;
 
@@ -16,75 +21,97 @@ public class AIService {
             String scheduleType
     ) throws Exception {
         String systemPrompt = PromptBuilder.buildSystemPrompt(scheduleType);
-        String userPrompt = PromptBuilder.buildUserPrompt(courses, faculty, rooms, dept, semester, section, constraints, customCommand, days, slots);
+        String userPrompt   = PromptBuilder.buildUserPrompt(
+                courses, faculty, rooms, dept, semester, section,
+                constraints, customCommand, days, slots);
 
-        Map<String, Object> parsedResponse = null;
+        Map<String, Object> parsedResponse        = null;
         List<Map<String, Object>> generatedTimetable = null;
         ValidationEngine.ValidationResult validation = null;
 
-        String currentPrompt = userPrompt;
+        String currentUserPrompt = userPrompt;
 
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            System.out.println("[AIService] Attempt " + attempt + " generating timetable...");
-            String aiResponse = GroqClient.callGroq(systemPrompt, currentPrompt);
-            
+            System.out.println("[AIService] === Attempt " + attempt + "/" + MAX_RETRIES + " ===");
+
+            String aiResponse;
             try {
-                parsedResponse = ResponseParser.parseResponse(aiResponse);
-                generatedTimetable = (List<Map<String, Object>>) parsedResponse.get("timetable");
-                if (generatedTimetable == null) {
-                    throw new RuntimeException("Timetable array is missing in response");
-                }
+                aiResponse = GroqClient.callGroq(systemPrompt, currentUserPrompt);
             } catch (Exception e) {
-                System.err.println("[AIService] JSON parsing or structure failed. Error: " + e.getMessage());
-                currentPrompt = "Your previous response was not valid JSON or was missing the 'timetable' key. " +
-                        "Please output ONLY valid JSON matching the schema.\n" + userPrompt;
+                System.err.println("[AIService] Groq API call failed on attempt " + attempt + ": " + e.getMessage());
+                if (attempt == MAX_RETRIES) throw e;
+                Thread.sleep(2000L * attempt);
                 continue;
             }
 
+            // Parse the response JSON
+            try {
+                parsedResponse = ResponseParser.parseResponse(aiResponse);
+            } catch (Exception e) {
+                System.err.println("[AIService] JSON parse failed on attempt " + attempt + ": " + e.getMessage());
+                // Prompt AI to fix its JSON
+                currentUserPrompt = "Your previous response was not valid JSON. Parse error: " + e.getMessage() + "\n\n" +
+                        "Please output ONLY a valid JSON object matching this schema:\n" +
+                        "{\"timetable\": [{\"day\":\"Monday\",\"slot\":\"8:00-9:00\",\"course\":\"CS301\",\"faculty\":\"F01\",\"room\":\"R101\",\"section\":\"A\",\"semester\":5,\"dept\":\"CSE\",\"color\":\"#1a4a8a\"}]}\n\n" +
+                        "Original task:\n" + userPrompt;
+                Thread.sleep(1500L);
+                continue;
+            }
+
+            // Extract timetable array
+            generatedTimetable = extractTimetableArray(parsedResponse);
+            if (generatedTimetable == null || generatedTimetable.isEmpty()) {
+                System.err.println("[AIService] Attempt " + attempt + ": No timetable array found in response. Keys: " + parsedResponse.keySet());
+                currentUserPrompt = "Your previous response was missing the 'timetable' array or it was empty.\n\n" +
+                        "REQUIRED: Your response MUST have a 'timetable' key with an array of schedule entries.\n" +
+                        "Original task:\n" + userPrompt;
+                Thread.sleep(1500L);
+                continue;
+            }
+
+            // Normalize data types (semester must be int, etc.)
+            generatedTimetable = normalizeTimetableEntries(generatedTimetable, dept, semester);
+
+            // Validate the generated timetable
             validation = ValidationEngine.validate(generatedTimetable, courses, faculty, rooms);
 
-            // Aim for 0 hard and 0 soft violations in first 3 attempts, fallback to 0 hard violations on later attempts
-            if (attempt <= 3) {
-                if (validation.hardCount == 0 && validation.softCount == 0) {
-                    System.out.println("[AIService] Validation succeeded! 0 Hard and 0 Soft Constraint Violations in attempt " + attempt);
-                    break;
-                }
-            } else {
-                if (validation.hardCount == 0) {
-                    System.out.println("[AIService] Validation succeeded! 0 Hard Constraint Violations in attempt " + attempt);
-                    break;
-                }
+            System.out.println("[AIService] Attempt " + attempt + " result: " +
+                    generatedTimetable.size() + " entries | " +
+                    validation.hardCount + " hard violations | " +
+                    validation.softCount + " soft violations | " +
+                    "Score: " + validation.overallScore + "%");
+
+            // Success conditions: 0 hard + 0 soft in first 3 attempts, 0 hard only after
+            boolean success = attempt <= 3
+                    ? (validation.hardCount == 0 && validation.softCount == 0)
+                    : (validation.hardCount == 0);
+
+            if (success) {
+                System.out.println("[AIService] ✓ SUCCESS on attempt " + attempt);
+                break;
             }
 
-            System.out.println("[AIService] Attempt " + attempt + " failed with " + validation.hardCount + " hard conflicts and " + validation.softCount + " soft conflicts.");
-            
-            // Build the repair prompt
-            StringBuilder repairMsg = new StringBuilder();
-            repairMsg.append("Your generated timetable had the following issues:\n");
-            if (validation.hardCount > 0) {
-                repairMsg.append("- Hard Constraint Violations:\n").append(JsonUtil.toJson(validation.conflicts)).append("\n");
-            }
-            if (validation.softCount > 0) {
-                repairMsg.append("- Soft Constraint Violations:\n").append(JsonUtil.toJson(validation.softViolations)).append("\n");
-            }
-            repairMsg.append("\nPlease correct all of the above constraint violations. Ensure there are ZERO clashes, and that no classes are placed during lunch break (12:00-1:00) or Saturday if avoidSaturday is true.\n");
-            repairMsg.append("Here is the timetable you generated in the previous step:\n").append(JsonUtil.toJson(generatedTimetable));
-
-            currentPrompt = repairMsg.toString();
-            
-            // Sleep to avoid Groq TPM rate limits
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
+            // Build repair prompt for next attempt
+            if (attempt < MAX_RETRIES) {
+                currentUserPrompt = PromptBuilder.buildRepairPrompt(
+                        userPrompt,
+                        JsonUtil.toJson(generatedTimetable),
+                        validation.conflicts,
+                        validation.softViolations
+                );
+                Thread.sleep(2500L); // Rate limit buffer
             }
         }
 
+        if (generatedTimetable == null) {
+            throw new RuntimeException("AI failed to generate a timetable after " + MAX_RETRIES + " attempts.");
+        }
         if (validation == null) {
-            throw new RuntimeException("Failed to generate timetable using AI after " + MAX_RETRIES + " attempts.");
+            validation = ValidationEngine.validate(generatedTimetable, courses, faculty, rooms);
         }
 
-        // Re-inject final verified validation analytics to prevent AI hallucination of scores
+        // Overwrite AI-reported scores with our validated scores (prevents hallucinated scores)
+        parsedResponse.put("timetable", generatedTimetable);
         parsedResponse.put("conflicts", validation.conflicts);
         parsedResponse.put("softConstraintViolations", validation.softViolations);
         parsedResponse.put("facultyWorkload", TimetableController.calculateFacultyWorkload(generatedTimetable, faculty));
@@ -95,8 +122,80 @@ public class AIService {
         scoreMap.put("softViolations", validation.softCount);
         scoreMap.put("overallScore", validation.overallScore);
         parsedResponse.put("score", scoreMap);
-        parsedResponse.put("generator", "AI (Groq Llama 3.3)");
+        parsedResponse.put("generator", "AI (Groq Llama 3.3-70B Versatile)");
+        parsedResponse.put("entries", generatedTimetable.size());
 
         return JsonUtil.toJson(parsedResponse);
+    }
+
+    /**
+     * Safely extract the timetable array from parsed response.
+     * Handles various key names the AI might use.
+     */
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> extractTimetableArray(Map<String, Object> parsed) {
+        for (String key : new String[]{"timetable", "schedule", "entries", "result", "data"}) {
+            Object val = parsed.get(key);
+            if (val instanceof List<?> list && !list.isEmpty()) {
+                List<Map<String, Object>> result = new ArrayList<>();
+                for (Object item : list) {
+                    if (item instanceof Map) {
+                        result.add((Map<String, Object>) item);
+                    }
+                }
+                if (!result.isEmpty()) {
+                    if (!"timetable".equals(key)) {
+                        System.out.println("[AIService] Note: timetable was found under key '" + key + "', normalized.");
+                    }
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Normalize timetable entry data types for consistency.
+     * - semester → int
+     * - section → String
+     * - dept → use provided dept if missing
+     */
+    private static List<Map<String, Object>> normalizeTimetableEntries(
+            List<Map<String, Object>> entries, String dept, String semester) {
+        List<Map<String, Object>> normalized = new ArrayList<>();
+        int semInt = Integer.parseInt(semester);
+
+        for (Map<String, Object> entry : entries) {
+            Map<String, Object> e = new LinkedHashMap<>(entry);
+
+            // Semester must be int
+            Object sem = e.get("semester");
+            if (sem instanceof String s) {
+                try { e.put("semester", Integer.parseInt(s.trim())); } catch (NumberFormatException ex) { e.put("semester", semInt); }
+            } else if (sem instanceof Number n) {
+                e.put("semester", n.intValue());
+            } else {
+                e.put("semester", semInt);
+            }
+
+            // Dept fallback
+            if (e.get("dept") == null || e.get("dept").toString().isBlank()) {
+                e.put("dept", dept);
+            }
+
+            // Section must be a String
+            Object sec = e.get("section");
+            if (sec != null) {
+                e.put("section", sec.toString());
+            }
+
+            // Ensure color is set
+            if (e.get("color") == null || e.get("color").toString().isBlank()) {
+                e.put("color", "#1a4a8a");
+            }
+
+            normalized.add(e);
+        }
+        return normalized;
     }
 }

@@ -1,0 +1,9 @@
+[
+  {"id":"R101","name":"Room 101","type":"Lecture","capacity":60,"block":"A"},
+  {"id":"R102","name":"Room 102","type":"Lecture","capacity":60,"block":"A"},
+  {"id":"R201","name":"Room 201","type":"Lecture","capacity":80,"block":"B"},
+  {"id":"R202","name":"Room 202","type":"Lecture","capacity":80,"block":"B"},
+  {"id":"LAB1","name":"CS Lab 1","type":"Lab","capacity":40,"block":"C"},
+  {"id":"LAB2","name":"CS Lab 2","type":"Lab","capacity":40,"block":"C"},
+  {"id":"SEM1","name":"Seminar Hall","type":"Seminar","capacity":120,"block":"D"}
+]

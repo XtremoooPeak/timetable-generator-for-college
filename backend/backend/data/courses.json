@@ -1,0 +1,14 @@
+[
+  {"id":"CS201","name":"Data Structures","credits":4,"dept":"CSE","type":"Theory","semester":3,"sections":["A","B"]},
+  {"id":"CS301","name":"Algorithms","credits":4,"dept":"CSE","type":"Theory","semester":5,"sections":["A","B"]},
+  {"id":"CS302","name":"Database Systems","credits":4,"dept":"CSE","type":"Theory","semester":5,"sections":["A","B"]},
+  {"id":"CS401","name":"Machine Learning","credits":3,"dept":"CSE","type":"Theory","semester":7,"sections":["A"]},
+  {"id":"CS402","name":"Computer Networks","credits":4,"dept":"CSE","type":"Theory","semester":7,"sections":["A","B"]},
+  {"id":"CS501","name":"AI & Deep Learning","credits":3,"dept":"CSE","type":"Theory","semester":7,"sections":["A"]},
+  {"id":"CS-LAB1","name":"DS Lab","credits":2,"dept":"CSE","type":"Lab","semester":3,"sections":["A","B"]},
+  {"id":"CS-LAB2","name":"DB Lab","credits":2,"dept":"CSE","type":"Lab","semester":5,"sections":["A","B"]},
+  {"id":"IT301","name":"Web Technologies","credits":4,"dept":"IT","type":"Theory","semester":5,"sections":["A"]},
+  {"id":"IT201","name":"OS Concepts","credits":4,"dept":"IT","type":"Theory","semester":3,"sections":["A"]},
+  {"id":"MA101","name":"Maths","credits":4,"dept":"CSE","type":"Theory","semester":1,"sections":["A"],"facultyId":""},
+  {"id":"EN101","name":"English","credits":4,"dept":"CSE","type":"Theory","semester":1,"sections":["A"],"facultyId":""}
+]

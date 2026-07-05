@@ -1,0 +1,9 @@
+[
+  {"id":"F01","name":"Dr. Priya Sharma","dept":"CSE","designation":"Associate Professor","courses":["CS301","CS401","CS-LAB2"],"maxHoursPerDay":5,"unavailableSlots":[]},
+  {"id":"F02","name":"Dr. Amit Gupta","dept":"CSE","designation":"Professor","courses":["CS201","CS501","CS-LAB1"],"maxHoursPerDay":5,"unavailableSlots":[]},
+  {"id":"F03","name":"Dr. Neha Joshi","dept":"IT","designation":"Assistant Professor","courses":["IT301","IT201"],"maxHoursPerDay":5,"unavailableSlots":[]},
+  {"id":"F04","name":"Prof. Rajesh Kumar","dept":"CSE","designation":"Assistant Professor","courses":["CS302","CS402","CS-LAB1","CS-LAB2"],"maxHoursPerDay":5,"unavailableSlots":[]},
+  {"id":"F11","name":"Dr Suryansh","dept":"CSE","designation":"Assistant Professor","courses":["EN101"]},
+  {"id":"F12","name":"Dr Anshu","dept":"CSE","designation":"Assistant Professor","courses":["MA101"]},
+  {"id":"F13","name":"Dr Ramu Kaka","dept":"CSE","designation":"Assistant Professor","courses":["MA101","EN101"]}
+]
