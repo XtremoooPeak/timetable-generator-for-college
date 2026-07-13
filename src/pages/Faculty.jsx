@@ -4,6 +4,7 @@ import { FACULTY as INIT_FACULTY, DEPARTMENTS, COURSES } from '../utils/data';
 import { createItem, deleteItem, getCollection, updateItem } from '../api';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const sortName = name => name.replace(/^(dr\.?|prof\.?)\s+/i, '').trim();
 
 export default function FacultyPage() {
   const [faculty, setFaculty] = useState(INIT_FACULTY);
@@ -13,11 +14,12 @@ export default function FacultyPage() {
   const [availModal, setAvailModal] = useState(null);
   const [notice, setNotice] = useState('');
   const [form, setForm] = useState({ id: '', name: '', dept: 'CSE', designation: 'Assistant Professor', courses: [] });
+  const [selectedSemester, setSelectedSemester] = useState('');
 
   const designations = ['Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer'];
 
   useEffect(() => {
-    getCollection('faculty', INIT_FACULTY).then(setFaculty);
+    getCollection('faculty', INIT_FACULTY).then(data => setFaculty([...data].sort((a, b) => sortName(a.name).localeCompare(sortName(b.name)))));
     getCollection('courses', COURSES).then(setCourses);
   }, []);
 
@@ -39,10 +41,14 @@ export default function FacultyPage() {
         ? await updateItem('faculty', editing, form)
         : await createItem('faculty', form);
 
-      setFaculty(editing ? faculty.map(f => f.id === editing ? saved : f) : [...faculty, saved]);
+      setFaculty(editing
+        ? [...faculty.map(f => f.id === editing ? saved : f)].sort((a, b) => sortName(a.name).localeCompare(sortName(b.name)))
+        : [...faculty, saved].sort((a, b) => sortName(a.name).localeCompare(sortName(b.name))));
       setNotice('Saved to Java backend.');
     } catch (error) {
-      setFaculty(editing ? faculty.map(f => f.id === editing ? { ...form } : f) : [...faculty, form]);
+      setFaculty(editing
+        ? [...faculty.map(f => f.id === editing ? { ...form } : f)].sort((a, b) => sortName(a.name).localeCompare(sortName(b.name)))
+        : [...faculty, form].sort((a, b) => sortName(a.name).localeCompare(sortName(b.name))));
       setNotice('Saved locally. Start the Java backend to persist changes.');
     }
     setShowModal(false);
@@ -59,15 +65,38 @@ export default function FacultyPage() {
     setFaculty(faculty.filter(f => f.id !== id));
   };
 
+  const uniqueSemesters = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  const filteredFaculty = (selectedSemester
+    ? faculty.filter(f => f.courses.some(cId => {
+        const course = courses.find(c => c.id === cId);
+        return course && course.semester.toString() === selectedSemester;
+      }))
+    : faculty
+  ).sort((a, b) => sortName(a.name).localeCompare(sortName(b.name)));
+
   return (
     <>
       <Navbar title="Faculty" />
       <div className="page">
         {notice && <div className="alert alert-success">{notice}</div>}
         <div className="card">
-          <div className="card-header">
-            <h3>Faculty Registry ({faculty.length})</h3>
-            <button className="btn btn-primary" onClick={openAdd}>+ Add Faculty</button>
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3>Faculty Registry ({filteredFaculty.length})</h3>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <select 
+                className="form-control" 
+                style={{ width: '200px' }} 
+                value={selectedSemester} 
+                onChange={e => setSelectedSemester(e.target.value)}
+              >
+                <option value="">All Semesters</option>
+                {uniqueSemesters.map(sem => (
+                  <option key={sem} value={sem.toString()}>Semester {sem}</option>
+                ))}
+              </select>
+              <button className="btn btn-primary" onClick={openAdd}>+ Add Faculty</button>
+            </div>
           </div>
           <div className="table-wrap">
             <table>
@@ -83,7 +112,7 @@ export default function FacultyPage() {
                 </tr>
               </thead>
               <tbody>
-                {faculty.map(f => (
+                {filteredFaculty.map(f => (
                   <tr key={f.id}>
                     <td><code style={{ background: 'var(--juit-blue-pale)', color: 'var(--juit-blue)', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>{f.id}</code></td>
                     <td>
@@ -101,9 +130,13 @@ export default function FacultyPage() {
                     <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{f.designation}</span></td>
                     <td>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {f.courses.map(c => (
-                          <span key={c} className="badge badge-gray" style={{ fontSize: 11 }}>{c}</span>
-                        ))}
+                        {f.courses.map(c => {
+                          const courseObj = courses.find(course => course.id === c);
+                          const displayText = courseObj ? `${c} - ${courseObj.name}` : c;
+                          return (
+                            <span key={c} className="badge badge-gray" style={{ fontSize: 11 }}>{displayText}</span>
+                          );
+                        })}
                       </div>
                     </td>
                     <td>
@@ -171,7 +204,7 @@ export default function FacultyPage() {
                           setForm({...form, courses: updated});
                         }}
                       />
-                      {c.id}
+                      {c.id} - {c.name}
                     </label>
                   ))}
                 </div>

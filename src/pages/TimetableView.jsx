@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import { useAuth, ROLES } from '../context/AuthContext';
-import { getTimetable, saveTimetable, validateTimetable, getSuggestions, importCollection, clearTimetable, autoFixTimetable } from '../api';
-import { DAYS, SLOTS, FACULTY, ROOMS, COURSES } from '../utils/data';
+import { getTimetable, saveTimetable, validateTimetable, getSuggestions, importCollection, clearTimetable, autoFixTimetable, getCollection } from '../api';
+import { DAYS, SLOTS, FACULTY as INIT_FACULTY, ROOMS as INIT_ROOMS, DEPARTMENTS as INIT_DEPTS, COURSES } from '../utils/data';
 import {
   Box,
   Card,
@@ -39,6 +39,8 @@ import {
 } from '@mui/icons-material';
 
 
+const sortName = name => name.replace(/^(dr\.?|prof\.?)\s+/i, '').trim();
+
 export default function TimetableView() {
   const { user } = useAuth();
   const isAdmin = user?.role === ROLES.ADMIN;
@@ -56,6 +58,9 @@ export default function TimetableView() {
   const [selectedDept, setSelectedDept] = useState('CSE');
   const [selectedSemester, setSelectedSemester] = useState('5');
   const [selectedSection, setSelectedSection] = useState('A');
+  const [facultyList, setFacultyList] = useState(INIT_FACULTY);
+  const [roomList, setRoomList] = useState(INIT_ROOMS);
+  const [deptList, setDeptList] = useState(INIT_DEPTS);
 
   // Conflict / Score State
   const [validation, setValidation] = useState({ hardCount: 0, softCount: 0, overallScore: 100, conflicts: [], softViolations: [] });
@@ -117,9 +122,28 @@ export default function TimetableView() {
     }
   };
 
-  // Load Initial Timetable
+  // Load Initial Timetable & Faculty / Rooms / Depts
   useEffect(() => {
     loadTimetableData();
+    // Faculty — only teachers with courses assigned
+    getCollection('faculty', INIT_FACULTY).then(data => {
+      const teachers = data
+        .filter(f => f.courses && f.courses.length > 0)
+        .sort((a, b) => sortName(a.name).localeCompare(sortName(b.name)));
+      setFacultyList(teachers);
+      if (teachers.length > 0) setSelectedFaculty(teachers[0].id);
+      // Derive unique departments from faculty list
+      const depts = [...new Set(data.map(f => f.dept).filter(Boolean))].sort();
+      if (depts.length > 0) {
+        setDeptList(depts);
+        setSelectedDept(depts[0]);
+      }
+    });
+    // Rooms
+    getCollection('rooms', INIT_ROOMS).then(data => {
+      setRoomList(data);
+      if (data.length > 0) setSelectedRoom(data[0].id);
+    });
   }, []);
 
   const loadTimetableData = async () => {
@@ -428,9 +452,7 @@ export default function TimetableView() {
                   <>
                     <FormControl variant="outlined" size="small" sx={{ minWidth: 100 }}>
                       <Select value={selectedDept} onChange={e => setSelectedDept(e.target.value)}>
-                        <MenuItem value="CSE">CSE</MenuItem>
-                        <MenuItem value="ECE">ECE</MenuItem>
-                        <MenuItem value="IT">IT</MenuItem>
+                        {deptList.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
                       </Select>
                     </FormControl>
                     <FormControl variant="outlined" size="small" sx={{ minWidth: 100 }}>
@@ -449,7 +471,7 @@ export default function TimetableView() {
                 {viewType === 'faculty' && (
                   <FormControl variant="outlined" size="small" sx={{ minWidth: 200 }}>
                     <Select value={selectedFaculty} onChange={e => setSelectedFaculty(e.target.value)}>
-                      {FACULTY.map(f => <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>)}
+                      {facultyList.map(f => <MenuItem key={f.id} value={f.id}>{f.name}</MenuItem>)}
                     </Select>
                   </FormControl>
                 )}
@@ -457,7 +479,7 @@ export default function TimetableView() {
                 {viewType === 'room' && (
                   <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
                     <Select value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)}>
-                      {ROOMS.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
+                      {roomList.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
                     </Select>
                   </FormControl>
                 )}
@@ -465,9 +487,7 @@ export default function TimetableView() {
                 {viewType === 'dept' && (
                   <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
                     <Select value={selectedDept} onChange={e => setSelectedDept(e.target.value)}>
-                      <MenuItem value="CSE">CSE</MenuItem>
-                      <MenuItem value="ECE">ECE</MenuItem>
-                      <MenuItem value="IT">IT</MenuItem>
+                      {deptList.map(d => <MenuItem key={d} value={d}>{d}</MenuItem>)}
                     </Select>
                   </FormControl>
                 )}

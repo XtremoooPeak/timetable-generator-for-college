@@ -8,5 +8,6 @@
   {"id":"PH102","name":"Phy","credits":4,"dept":"CSE","type":"Theory","semester":1,"sections":["A"],"facultyId":""},
   {"id":"EN101","name":"English","credits":4,"dept":"CSE","type":"Theory","semester":1,"sections":["A"],"facultyId":""},
   {"id":"MA101","name":"Maths","credits":4,"dept":"CSE","type":"Theory","semester":1,"sections":["A"],"facultyId":""},
-  {"id":"BA101","name":"Basic Algo","credits":4,"dept":"CSE","type":"Theory","semester":1,"sections":["A"],"facultyId":""}
+  {"id":"BA101","name":"Basic Algo","credits":4,"dept":"CSE","type":"Theory","semester":1,"sections":["A"],"facultyId":""},
+  {"id":"C2202","name":"Helllo","credits":4,"dept":"CSE","type":"Theory","semester":6,"sections":["A"],"facultyId":""}
 ]

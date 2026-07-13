@@ -1,8 +1,8 @@
 [
-  {"id":"F01","name":"Dr. Priya Sharma","dept":"CSE","designation":"Associate Professor","courses":["CS301","CS401"],"unavailableSlots":[]},
-  {"id":"F02","name":"Dr. Amit Gupta","dept":"CSE","designation":"Professor","courses":["CS201","CS501"],"unavailableSlots":[]},
-  {"id":"F04","name":"Prof. Rajesh Kumar","dept":"CSE","designation":"Assistant Professor","courses":["CS302","CS402"],"unavailableSlots":[]},
+  {"id":"F01","name":"Dr. Priya Sharma","dept":"CSE","designation":"Associate Professor","courses":["CS301"],"unavailableSlots":[]},
+  {"id":"F02","name":"Dr. Amit Gupta","dept":"CSE","designation":"Professor","courses":["CS201"],"unavailableSlots":[]},
   {"id":"F103","name":"Dr Suryansh","dept":"CSE","designation":"Assistant Professor","courses":["EN101","MA101","BA101"]},
   {"id":"F07","name":"Dr Ritesh","dept":"CSE","designation":"Assistant Professor","courses":["EN101","MA101","PH102","CS101"]},
-  {"id":"F09","name":"Dr Anu","dept":"CSE","designation":"Assistant Professor","courses":["PH102","CS101","BA101","EN101","MA101"]}
+  {"id":"F09","name":"Dr Anu","dept":"CSE","designation":"Assistant Professor","courses":["PH102","CS101","BA101","EN101","MA101"]},
+  {"id":"F111","name":"Dr Raju","dept":"CSE","designation":"Assistant Professor","courses":["CS302","CS301"]}
 ]

@@ -16,10 +16,10 @@ export const ROOMS = [
 ];
 
 export const FACULTY = [
-  { id: 'F01', name: 'Dr. Priya Sharma', dept: 'CSE', designation: 'Associate Professor', courses: ['CS301', 'CS401'] },
-  { id: 'F02', name: 'Dr. Amit Gupta', dept: 'CSE', designation: 'Professor', courses: ['CS201', 'CS501'] },
+  { id: 'F01', name: 'Dr. Priya Sharma', dept: 'CSE', designation: 'Associate Professor', courses: ['CS301'] },
+  { id: 'F02', name: 'Dr. Amit Gupta', dept: 'CSE', designation: 'Professor', courses: ['CS201'] },
   { id: 'F03', name: 'Dr. Neha Joshi', dept: 'IT', designation: 'Assistant Professor', courses: ['IT301', 'IT201'] },
-  { id: 'F04', name: 'Prof. Rajesh Kumar', dept: 'CSE', designation: 'Assistant Professor', courses: ['CS302', 'CS402'] },
+  { id: 'F04', name: 'Prof. Rajesh Kumar', dept: 'CSE', designation: 'Assistant Professor', courses: ['CS302'] },
   { id: 'F05', name: 'Dr. Sunita Rao', dept: 'ECE', designation: 'Associate Professor', courses: ['EC301', 'EC201'] },
   { id: 'F06', name: 'Dr. Vikram Singh', dept: 'ME', designation: 'Professor', courses: ['ME301', 'ME201'] },
 ];
